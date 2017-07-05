@@ -10,9 +10,9 @@ start(_StartType, _StartArgs) ->
 		]}
 	]),
   Port = application:get_env(csi, port, 8080),
-	{ok, _} = Result = cowboy:start_clear(http, 100, [{port, Port}], #{env => #{dispatch => Dispatch}}),
+	{ok, _} = cowboy:start_clear(http, 100, [{port, Port}], #{env => #{dispatch => Dispatch}}),
   lager:info("CSI websocket listener started on port: ~p", [Port]),
-  Result.
+  {ok, self()}.
 
 stop(_State) ->
   cowboy:stop_listener(http),
