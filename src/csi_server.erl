@@ -40,7 +40,7 @@ handle_call({command, {send, Pid, Message}}, _From, State) ->
 handle_cast({command, {call, Correlation, {Module, Function}, Params}}, Handler) ->
     lager:debug("incoming call request: ~p:~p(~P)", [Module, Function, Params, 9]),
     Result = erlang:apply(Module, Function, Params),
-    lager:debug("outcoming call response: (~P)",[Result, 9]),
+    lager:debug("outcoming call response: ~P",[Result, 9]),
     Message = {reply, {Correlation, Result}},
     send_to_handler(Handler, Message),
     {noreply, Handler};
