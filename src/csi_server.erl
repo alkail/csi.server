@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, terminate/1, command/2]).
+-export([start_link/0, stop/1, command/2]).
 
 -export([init/1,
          handle_call/3,
@@ -11,47 +11,56 @@
          terminate/2,
          code_change/3]).
 
+%%%===================================================================
+%%% API
+%%%===================================================================
+
 start_link() ->
     gen_server:start_link(?MODULE, self(), []).
 
-terminate(Pid) ->
-    gen_server:call(Pid, terminate).
+stop(Pid) ->
+    gen_server:stop(Pid).
 
 command(Pid, Command) ->
-    gen_server:cast(Pid, {command, Command}),
-    ok.
+    gen_server:cast(Pid, {command, Command}).
+
+%%%===================================================================
+%%% gen_server callbacks
+%%%===================================================================
 
 init(Handler) ->
-    self() ! {setup, #{self => self()}},
+    Message = {setup, #{self => self()}},
+    send_to_handler(Handler, Message),
     {ok, Handler}.
 
-handle_call(terminate, _From, State) ->
-  {stop, terminate, ok, State};
-
 handle_call({command, {send, Pid, Message}}, _From, State) ->
-  Pid ! Message,
-  {reply, ok, State}.
+    Pid ! Message,
+    {reply, ok, State}.
 
-handle_cast({command, {call, Correlation, {Module, Function} = Call, Params}}, State) ->
-    lager:info("incoming call request: (~p) ~p", [self(), Call]),
+handle_cast({command, {call, Correlation, {Module, Function}, Params}}, Handler) ->
+    lager:debug("incoming call request: ~p:~p(~P)", [Module, Function, Params, 9]),
     Result = erlang:apply(Module, Function, Params),
-    self() ! {reply, {Correlation, Result}},
-    {noreply, State};
+    lager:debug("outcoming call response: (~P)",[Result, 9]),
+    Message = {reply, {Correlation, Result}},
+    send_to_handler(Handler, Message),
+    {noreply, Handler};
 
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast(_Msg, Handler) ->
+    {noreply, Handler}.
 
 handle_info(Message, Handler) ->
-  ToSend = case Message of
-    {setup, _} -> Message;
-    {reply, _} -> Message;
-    Other      -> {message, Other}
-  end,
-  Handler ! ToSend,
-  {noreply, Handler}.
+    send_to_handler(Handler, {message, Message}),
+    {noreply, Handler}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, _Handler) ->
     ok.
 
-code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+code_change(_OldVsn, Handler, _Extra) ->
+    {ok, Handler}.
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+
+send_to_handler(Handler, Message)->
+    Handler ! Message.
