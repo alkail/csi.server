@@ -9,6 +9,5 @@
       lager,
       cowboy
     ]},
-    {mod, {csi_app, []}},
     {env, []}
   ]}.
