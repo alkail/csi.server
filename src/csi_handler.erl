@@ -18,6 +18,6 @@ websocket_handle({binary, Data}, Req, Pid) ->
 websocket_info(Info, Req, Pid) ->
   {reply, {binary, term_to_binary(Info)}, Req, Pid}.
 
-terminate(_Reason, _Req, Pid) ->
+terminate(Reason, _Req, Pid) ->
   lager:info("websocket handler terminated: Reason=~p", [Reason]),
   csi_message_handler:stop(Pid).
