@@ -5,19 +5,19 @@
 -export([websocket_info/3]).
 -export([terminate/3]).
 
-init(Req, _Opts) ->
-  {ok, Pid} = csi_server:start_link(),
-  lager:info("websocket handler initiated", []),
+init(Req, Opts) ->
+  {ok, Pid} = csi_message_handler:start_link(Opts),
+  lager:info("websocket handler initiated"),
   {cowboy_websocket, Req, Pid}.
 
 websocket_handle({binary, Data}, Req, Pid) ->
   Decoded = erlang:binary_to_term(Data),
-  csi_server:command(Pid, Decoded),
+  csi_message_handler:command(Pid, Decoded),
   {ok, Req, Pid}.
 
-websocket_info(Info, Req, State) ->
-  {reply, {binary, term_to_binary(Info)}, Req, State}.
+websocket_info(Info, Req, Pid) ->
+  {reply, {binary, term_to_binary(Info)}, Req, Pid}.
 
-terminate(Reason, _Req, Pid) ->
+terminate(_Reason, _Req, Pid) ->
   lager:info("websocket handler terminated: Reason=~p", [Reason]),
-  ok = csi_server:stop(Pid).
+  csi_message_handler:stop(Pid).
